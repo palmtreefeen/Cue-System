@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The CUE System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Kalam:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#171310;
+    --paper:#f4eeda;
+    --paper-edge:#e7dfc2;
+    --paper-shadow: rgba(20,14,4,.35);
+    --rule: rgba(60,48,26,.15);
+    --margin-red:#b85c4a;
+    --ink-blue:#283a63;
+    --ink-red:#9c3b2e;
+    --ink-graphite:#3a3733;
+    --cover-black:#17181a;
+    --bubble-bg:#26262a;
+    --bubble-text:#ededed;
+    --gold:#a9863e;
+    --paper-muted: rgba(58,55,51,.32);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(255,235,200,.06), transparent 55%),
+      var(--bg);
+    min-height:100vh;
+    color:var(--bubble-text);
+    font-family:'IBM Plex Mono', monospace;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:36px 16px 64px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    max-width:640px;
+    text-align:center;
+    margin-bottom:28px;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(32px, 6vw, 46px);
+    margin:0 0 8px;
+    color:#f6f1e2;
+    letter-spacing:-.01em;
+  }
+  header p{
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size:14.5px;
+    line-height:1.55;
+    color:#c9c3b6;
+    margin:0;
+  }
+  .notebook-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-top:18px;
+    font-size:11px;
+    letter-spacing:.04em;
+    color:#9a9284;
+    border:1px solid rgba(255,255,255,.12);
+    padding:6px 14px;
+    border-radius:999px;
+  }
+  .notebook-tag .swatch{
+    width:10px;height:10px;border-radius:2px;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.4) 0, transparent 40%),
+      var(--cover-black);
+  }
+
+  /* ---------- Spread ---------- */
+  .stage{
+    width:100%;
+    max-width:900px;
+  }
+  .spread{
+    position:relative;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    background:var(--cover-black);
+    border-radius:6px;
+    padding:14px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .page{
+    background:
+      linear-gradient(var(--paper), var(--paper) 100%);
+    position:relative;
+    padding:26px 22px 22px;
+    min-height:460px;
+    overflow:hidden;
+  }
+  .page::before{ /* ruled lines */
+    content:"";
+    position:absolute; inset:0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 33px,
+      var(--rule) 33px 34px
+    );
+    background-position: 0 78px;
+    pointer-events:none;
+  }
+  .page-left{
+    border-radius:4px 0 0 4px;
+    box-shadow: inset -10px 0 20px -18px var(--paper-shadow);
+  }
+  .page-left::after{ /* red margin line */
+    content:"";
+    position:absolute; top:0; bottom:0; left:52px;
+    width:1px;
+    background:var(--margin-red);
+    opacity:.55;
+  }
+  .page-right{
+    border-radius:0 4px 4px 0;
+    box-shadow: inset 10px 0 20px -18px var(--paper-shadow);
+  }
+  .gutter{
+    position:absolute; top:14px; bottom:14px; left:50%;
+    width:22px; margin-left:-11px;
+    background:linear-gradient(to right, rgba(0,0,0,.18), rgba(0,0,0,.35), rgba(0,0,0,.18));
+    filter:blur(2px);
+    z-index:2;
+    pointer-events:none;
+  }
+  .page-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:#8b8368;
+    display:flex;
+    justify-content:space-between;
+    position:relative; z-index:1;
+    margin-bottom:16px;
+  }
+
+  /* left page sections */
+  .section{
+    position:relative; z-index:1;
+    margin-bottom:20px;
+  }
+  .section h3{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#7d7458;
+    margin:0 0 6px;
+    padding-bottom:4px;
+    border-bottom:1px solid var(--rule);
+  }
+  .section .line{
+    font-family:'Kalam', cursive;
+    font-size:14px;
+    color:var(--ink-blue);
+    opacity:0;
+    transform:translateY(4px);
+    transition:opacity .5s ease, transform .5s ease;
+    min-height:20px;
+    line-height:20px;
+  }
+  .section.revealed .line{ opacity:1; transform:translateY(0); }
+  .section .line:nth-child(2){ transition-delay:.1s; }
+
+  /* right page rows */
+  .tasklist{ position:relative; z-index:1; }
+  .task-row{
+    position:relative;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    height:33px;
+    font-family:'Kalam', cursive;
+    font-size:14.5px;
+    color:var(--ink-blue);
+  }
+  .row-arrow{
+    font-family:'Kalam', cursive;
+    color:var(--ink-graphite);
+    font-size:15px;
+    width:14px;
+    flex:none;
+    opacity:0;
+    transform:translateX(-4px);
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  .task-row.arrowed .row-arrow{ opacity:1; transform:translateX(0); }
+  .row-num{
+    font-size:12.5px;
+    color:#8b8368;
+    width:14px;
+    flex:none;
+  }
+  .row-text-wrap{
+    position:relative;
+    flex:1;
+  }
+  .row-text{
+    opacity:0;
+    transform:translateY(3px);
+    transition:opacity .45s ease, transform .45s ease, color .3s ease;
+    display:inline-block;
+  }
+  .task-row.revealed .row-text{ opacity:1; transform:translateY(0); }
+  .task-row.done .row-text{ color:#6b6555; }
+
+  .mark-svg{
+    position:absolute;
+    pointer-events:none;
+  }
+  .circle-svg{
+    top:-9px; left:-8px; right:-10px; bottom:-6px;
+    width:calc(100% + 18px); height:calc(100% + 15px);
+  }
+  .circle-svg path{
+    fill:none;
+    stroke:var(--ink-red);
+    stroke-width:2.6;
+    stroke-linecap:round;
+    pathLength:1;
+    stroke-dasharray:1;
+    stroke-dashoffset:1;
+    transition:stroke-dashoffset .75s ease;
+  }
+  .task-row.circled .circle-svg path{ stroke-dashoffset:0; }
+
+  .strike-svg{
+    top:0; left:-2px; right:0; bottom:0;
+    width:calc(100% + 2px); height:100%;
+  }
+  .strike-svg path{
+    fill:none;
+    stroke:var(--ink-graphite);
+    stroke-width:1.8;
+    stroke-linecap:round;
+    pathLength:1;
+    stroke-dasharray:1;
+    stroke-dashoffset:1;
+    transition:stroke-dashoffset .5s ease;
+  }
+  .task-row.done .strike-svg path{ stroke-dashoffset:0; }
+
+  .closeout-svg{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    z-index:3;
+    pointer-events:none;
+  }
+  .closeout-svg path{
+    fill:none;
+    stroke:var(--ink-graphite);
+    stroke-width:2.2;
+    stroke-linecap:round;
+    pathLength:1;
+    stroke-dasharray:1;
+    stroke-dashoffset:1;
+    transition:stroke-dashoffset .9s ease;
+  }
+  .page-right.closed .closeout-svg path.x1{ stroke-dashoffset:0; }
+  .page-right.closed .closeout-svg path.x2{ stroke-dashoffset:0; transition-delay:.25s; }
+  .page-right.closed .tasklist,
+  .page-right.closed .page-label{
+    transition:opacity .5s ease;
+    opacity:.4;
+  }
+  .close-caption{
+    position:absolute;
+    bottom:16px; left:22px; right:22px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.04em;
+    color:#8b8368;
+    opacity:0;
+    transition:opacity .5s ease .4s;
+    z-index:4;
+  }
+  .page-right.closed .close-caption{ opacity:1; }
+
+  /* ---------- Bubble panel ---------- */
+  .talk{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    max-width:600px;
+    margin:30px auto 0;
+    min-height:90px;
+  }
+  .avatar{
+    flex:none;
+    width:34px; height:34px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#4a4640,#2a2723);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif;
+    font-size:14px;
+    color:#e8e2d0;
+    margin-top:2px;
+  }
+  .bubble{
+    background:var(--bubble-bg);
+    color:var(--bubble-text);
+    border-radius:18px;
+    border-bottom-left-radius:4px;
+    padding:13px 16px;
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size:15px;
+    line-height:1.48;
+  }
+  .bubble .step-title{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:6px;
+  }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    max-width:600px;
+    margin:24px auto 0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+  }
+  .stepper{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .dot-btn{
+    background:none;
+    border:1px solid rgba(255,255,255,.14);
+    color:#8f8878;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.03em;
+    padding:6px 10px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all .25s ease;
+  }
+  .dot-btn.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#1a1509;
+  }
+  .dot-btn:hover:not(.active){
+    border-color:rgba(255,255,255,.35);
+    color:#e8e2d0;
+  }
+  .nav-buttons{
+    display:flex;
+    gap:10px;
+  }
+  .nav-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.04em;
+    background:transparent;
+    border:1px solid rgba(255,255,255,.2);
+    color:#e8e2d0;
+    padding:10px 20px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:background .2s ease, border-color .2s ease;
+  }
+  .nav-btn:hover:not(:disabled){
+    background:rgba(255,255,255,.06);
+    border-color:rgba(255,255,255,.4);
+  }
+  .nav-btn:disabled{ opacity:.3; cursor:default; }
+  .nav-btn.primary{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#1a1509;
+    font-weight:600;
+  }
+  .nav-btn.primary:hover{ background:#bd9a52; }
+
+  @media (max-width:640px){
+    .spread{ grid-template-columns:1fr; gap:12px; }
+    .page{ min-height:auto; padding:20px 18px 18px; border-radius:4px !important; box-shadow:none !important; }
+    .gutter{ display:none; }
+    .page-left::after{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">A weekly system for a brain that won't stop</div>
+  <h1>The CUE System</h1>
+  <p>Dia walked Carlos through this over text. Here's the same thing, spread out on the page so it actually clicks.</p>
+  <div class="notebook-tag"><span class="swatch"></span> Mead Composition · Wide Ruled · 100 sheets</div>
+</header>
+
+<div class="stage">
+  <div class="spread">
+    <div class="gutter"></div>
+
+    <div class="page page-left">
+      <div class="page-label"><span>CUE SYSTEM</span><span>PEOPLE / FINANCE / IDEAS</span></div>
+
+      <div class="section" id="sec-people">
+        <h3>People notes</h3>
+        <div class="line">Maria R. — call back re: Westside listing</div>
+        <div class="line">Escrow officer — docs due Thurs</div>
+      </div>
+
+      <div class="section" id="sec-financial">
+        <h3>Financial notes</h3>
+        <div class="line">Paid $45 — MLS photography</div>
+        <div class="line">Spent $12 — open house signs</div>
+      </div>
+
+      <div class="section" id="sec-ideas">
+        <h3>Ideas &amp; possibilities</h3>
+        <div class="line">What if Sunday open houses had a QR sign-in?</div>
+      </div>
+    </div>
+
+    <div class="page page-right" id="page-right">
+      <div class="page-label"><span>CUE SYSTEM</span><span>THIS WEEK'S FOCUS</span></div>
+
+      <div class="tasklist" id="tasklist"></div>
+
+      <svg class="closeout-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path class="x1" pathLength="1" d="M4,4 L96,96"/>
+        <path class="x2" pathLength="1" d="M96,4 L4,96"/>
+      </svg>
+      <div class="close-caption">closed · monday → fresh spread</div>
+    </div>
+  </div>
+
+  <div class="talk">
+    <div class="avatar">D</div>
+    <div class="bubble">
+      <span class="step-title" id="step-title"></span>
+      <span id="step-text"></span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="stepper" id="stepper"></div>
+    <div class="nav-buttons">
+      <button class="nav-btn" id="prevBtn">← Back</button>
+      <button class="nav-btn primary" id="nextBtn">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const tasks = [
+  "Follow up with Maria re: Westside listing",
+  "Prep CMA for Friday's appointment",
+  "Record content batch for the week",
+  "Update MLS listing photos",
+  "Review Q2 numbers",
+  "Door-knock route — Eastside",
+  "Organize the truck / supplies",
+  "Workout 4x this week"
+];
+
+// row states, by step threshold
+const CIRCLE_ROWS = [3, 6];         // circled as today's priority
+const DONE_ROWS   = [1, 2, 3, 4, 5, 7]; // crossed off (row 3 shows circle+strike)
+const ARROW_ROWS  = [8];            // migrated forward, not done
+
+const steps = [
+  {
+    title: "Step 0 — A fresh spread",
+    text: "Every week starts the same way: a blank two-page spread. Right side's for this week's tasks. Left side's reserved for anything else — people, money, ideas.",
+    reveal: 0
+  },
+  {
+    title: "Step 1 — Write this week's tasks",
+    text: "Number your tasks on the right page, one blank line between each. Don't cram it — the white space is doing real work for your brain.",
+    reveal: 1
+  },
+  {
+    title: "Step 2 — Capture the extras",
+    text: "The left page splits into three: people notes up top, financial notes in the middle, ideas & possibilities at the bottom. Most of it stays blank most weeks — that's fine.",
+    reveal: 2
+  },
+  {
+    title: "Step 3 — Circle today's priority",
+    text: "Each morning, circle whichever tasks actually have to happen today. Not everything — just the one or two that matter most.",
+    reveal: 3
+  },
+  {
+    title: "Step 4 — Cross off what's done",
+    text: "Cross a task off the second you finish it. A circled task can still get crossed off later — circling just means 'today,' not 'important forever.'",
+    reveal: 4
+  },
+  {
+    title: "Step 5 — Arrow what's not done",
+    text: "Anything still open on Monday gets an arrow, pointing to its new spot on next week's page. The arrow is what lets you leave it behind without your brain flagging it as lost.",
+    reveal: 5
+  },
+  {
+    title: "Step 6 — Close the page",
+    text: "Once every task is either crossed off or arrowed forward, draw one big X across the whole spread. That's the signal: this page is closed. Turn to a fresh one and start again.",
+    reveal: 6
+  }
+];
+
+const tasklistEl = document.getElementById('tasklist');
+const pageRightEl = document.getElementById('page-right');
+const stepperEl = document.getElementById('stepper');
+const stepTitleEl = document.getElementById('step-title');
+const stepTextEl = document.getElementById('step-text');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+// build rows
+tasks.forEach((text, i) => {
+  const n = i + 1;
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.dataset.row = n;
+  row.innerHTML = `
+    <span class="row-arrow">→</span>
+    <span class="row-num">${n}.</span>
+    <span class="row-text-wrap">
+      <svg class="mark-svg circle-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path pathLength="1" d="M8,50 C8,20 30,4 50,4 C78,4 92,20 92,50 C92,82 72,96 50,96 C22,96 8,78 8,50 Z"/>
+      </svg>
+      <span class="row-text">${text}</span>
+      <svg class="mark-svg strike-svg" viewBox="0 0 100 20" preserveAspectRatio="none">
+        <path pathLength="1" d="M0,10 L100,10"/>
+      </svg>
+    </span>
+  `;
+  tasklistEl.appendChild(row);
+});
+
+// build stepper dots
+const labels = ["Blank","Write","Notes","Circle","Cross off","Migrate","Close out"];
+labels.forEach((label, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'dot-btn';
+  btn.textContent = label;
+  btn.addEventListener('click', () => goTo(i));
+  stepperEl.appendChild(btn);
+});
+
+let current = 0;
+
+function render(){
+  const reveal = steps[current].reveal;
+
+  // left page sections
+  document.getElementById('sec-people').classList.toggle('revealed', reveal >= 2);
+  document.getElementById('sec-financial').classList.toggle('revealed', reveal >= 2);
+  document.getElementById('sec-ideas').classList.toggle('revealed', reveal >= 2);
+
+  // right page rows
+  document.querySelectorAll('.task-row').forEach(row => {
+    const n = parseInt(row.dataset.row, 10);
+    row.classList.toggle('revealed', reveal >= 1);
+    row.classList.toggle('circled', reveal >= 3 && CIRCLE_ROWS.includes(n));
+    row.classList.toggle('done', reveal >= 4 && DONE_ROWS.includes(n));
+    row.classList.toggle('arrowed', reveal >= 5 && ARROW_ROWS.includes(n));
+  });
+
+  pageRightEl.classList.toggle('closed', reveal >= 6);
+
+  // bubble
+  stepTitleEl.textContent = steps[current].title;
+  stepTextEl.textContent = steps[current].text;
+
+  // stepper active state
+  document.querySelectorAll('.dot-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === current);
+  });
+
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === steps.length - 1;
+  nextBtn.textContent = current === steps.length - 1 ? "Done" : "Next →";
+}
+
+function goTo(i){
+  current = Math.max(0, Math.min(steps.length - 1, i));
+  render();
+}
+
+prevBtn.addEventListener('click', () => goTo(current - 1));
+nextBtn.addEventListener('click', () => goTo(current + 1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') goTo(current + 1);
+  if (e.key === 'ArrowLeft') goTo(current - 1);
+});
+
+render();
+</script>
+</body>
+</html>
